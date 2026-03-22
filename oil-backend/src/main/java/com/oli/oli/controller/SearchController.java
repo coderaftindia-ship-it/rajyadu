@@ -1,6 +1,7 @@
 package com.oli.oli.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,8 +118,7 @@ public class SearchController {
                 ingredients,
                 benefits,
                 product.getHowToUse(),
-                imageUrls
-        );
+                imageUrls);
     }
 
     private CategoryDto categoryToDto(Category category) {
