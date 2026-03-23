@@ -246,7 +246,8 @@ public class IThinkController {
                 if (msg != null && (msg.toLowerCase().contains("booking is temporarily disabled")
                         || msg.toLowerCase().contains("finance team")
                         || msg.toLowerCase().contains("wallet")
-                        || msg.toLowerCase().contains("balance"))) {
+                        || msg.toLowerCase().contains("balance")
+                        || msg.toLowerCase().contains("insufficient funds"))) {
                     log.info(
                             "IThink booking restriction detected for orderId={}, attempting fallback creation without logistics",
                             order.getId());
@@ -254,7 +255,9 @@ public class IThinkController {
                     Map<String, Object> retryData = new HashMap<>(data);
                     retryData.put("logistics", "");
                     retryData.put("s_type", "");
-                    retryData.put("order_type", ""); // Try with empty order_type as well
+                    // Keep the original order_type instead of clearing it, as it should be
+                    // "forward"
+                    // retryData.put("order_type", ""); // Try with empty order_type as well
 
                     try {
                         ResponseEntity<Map> retryResp = restTemplate.postForEntity(url,

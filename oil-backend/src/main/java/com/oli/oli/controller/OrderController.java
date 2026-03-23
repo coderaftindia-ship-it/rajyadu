@@ -259,19 +259,19 @@ public class OrderController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
         if (req != null) {
-            if (StringUtils.hasText(req.status())) {
+            if (req.status() != null) {
                 o.setStatus(req.status().trim());
             }
-            if (StringUtils.hasText(req.paymentStatus())) {
+            if (req.paymentStatus() != null) {
                 o.setPaymentStatus(req.paymentStatus().trim());
             }
-            if (StringUtils.hasText(req.deliveryProvider())) {
+            if (req.deliveryProvider() != null) {
                 o.setDeliveryProvider(req.deliveryProvider().trim());
             }
-            if (StringUtils.hasText(req.trackingId())) {
+            if (req.trackingId() != null) {
                 o.setTrackingId(req.trackingId().trim());
             }
-            if (StringUtils.hasText(req.trackingUrl())) {
+            if (req.trackingUrl() != null) {
                 o.setTrackingUrl(req.trackingUrl().trim());
             }
         }
@@ -293,9 +293,14 @@ public class OrderController {
                         o.setTrackingUrl("Order Created on Portal (Manual Booking Required)");
                     }
                 } else {
-                    if (!StringUtils.hasText(o.getTrackingUrl()) && created != null
-                            && StringUtils.hasText(created.message())) {
-                        o.setTrackingUrl(created.message().trim());
+                    if (created != null && StringUtils.hasText(created.message())) {
+                        String msg = created.message().trim();
+                        // Avoid double prefixing
+                        if (msg.startsWith("Automatic Booking Failed: ")) {
+                            o.setTrackingUrl(msg);
+                        } else {
+                            o.setTrackingUrl("Automatic Booking Failed: " + msg);
+                        }
                     }
                 }
             } catch (RuntimeException ignored) {
