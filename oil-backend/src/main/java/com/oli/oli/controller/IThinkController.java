@@ -281,7 +281,7 @@ public class IThinkController {
         if (weightKg == null || weightKg.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Invalid weight");
         }
-        if (productMrp == null || productMrp.compareTo(BigDecimal.ZERO) < 0) {
+        if (productMrp == null || productMrp.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Invalid productMrp");
         }
 
@@ -319,8 +319,10 @@ public class IThinkController {
             Object statusObj = body.get("status");
             String status = statusObj == null ? "" : String.valueOf(statusObj);
             if (!Objects.equals(status, "success")) {
-                log.info("IThink serviceability not-serviceable toPincode={} status={}", deliveryPincode, status);
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Not serviceable", body));
+                String msg = extractMessage(body);
+                log.info("IThink serviceability not-serviceable toPincode={} status={} message={}", deliveryPincode,
+                        status, msg);
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, msg, body));
             }
 
             Object dataObj = body.get("data");

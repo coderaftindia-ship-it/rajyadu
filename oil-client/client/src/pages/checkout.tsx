@@ -128,11 +128,27 @@ export default function Checkout() {
     return Math.max(0.5, count * 0.5);
   }, [items]);
 
+  const computedProductMrp = useMemo(() => {
+    const fromSubtotal = Number.isFinite(subtotal) ? subtotal : 0;
+    if (fromSubtotal > 0) return fromSubtotal;
+    return items.reduce((acc, it) => {
+      const qty = it.quantity ?? 0;
+      const price = toNumber(it.product?.price);
+      return acc + price * qty;
+    }, 0);
+  }, [items, subtotal]);
+
   useEffect(() => {
     const pincodeOk = /^[1-9]\d{5}$/.test(formData.pincode.trim());
     if (!pincodeOk) {
       setShippingCharge(null);
       setShippingError(null);
+      return;
+    }
+
+    if (!Number.isFinite(computedProductMrp) || computedProductMrp <= 0) {
+      setShippingCharge(null);
+      setShippingError("Invalid cart subtotal");
       return;
     }
 
@@ -144,7 +160,7 @@ export default function Checkout() {
       deliveryPincode: formData.pincode.trim(),
       weight: String(computedWeightKg),
       cod: String(isCod),
-      productMrp: String(subtotal),
+      productMrp: String(computedProductMrp),
     });
 
     fetch(oliUrl(`/api/ithink/serviceability?${qp.toString()}`), { signal: controller.signal })
@@ -171,7 +187,7 @@ export default function Checkout() {
       .finally(() => setShippingLoading(false));
 
     return () => controller.abort();
-  }, [formData.pincode, computedWeightKg, isCod, subtotal]);
+  }, [formData.pincode, computedWeightKg, isCod, computedProductMrp]);
 
   const shipping = shippingCharge ?? 0;
   const total = subtotal + shipping;
