@@ -249,28 +249,40 @@ public class IThinkController {
                         || msg.toLowerCase().contains("balance")
                         || msg.toLowerCase().contains("insufficient funds"))) {
                     log.info(
-                            "IThink booking restriction detected for orderId={}, attempting fallback creation without logistics",
+                            "IThink booking restriction detected for orderId={}, attempting fallback creation for Store Order",
                             order.getId());
 
                     Map<String, Object> retryData = new HashMap<>(data);
-                    retryData.put("logistics", "");
-                    retryData.put("s_type", "");
-                    // Keep the original order_type instead of clearing it, as it should be
-                    // "forward"
-                    // retryData.put("order_type", ""); // Try with empty order_type as well
+                    // Remove logistics and s_type to try and create as a "Store Order"
+                    retryData.remove("logistics");
+                    retryData.remove("s_type");
+                    // Also try with empty order_type if needed, but let's try removing logistics
+                    // first
 
                     try {
                         ResponseEntity<Map> retryResp = restTemplate.postForEntity(url,
                                 new HttpEntity<>(Map.of("data", retryData), headers), Map.class);
                         Map retryBody = retryResp.getBody();
                         if (retryBody != null && Objects.equals(String.valueOf(retryBody.get("status")), "success")) {
-                            log.info("IThink fallback creation success for orderId={}", order.getId());
+                            log.info("IThink Store Order fallback creation success for orderId={}", order.getId());
                             return parseSuccessResponse(order, retryBody);
                         } else {
-                            String retryMsg = extractMessage(retryBody);
-                            log.warn("IThink fallback creation also failed for orderId={} status={} message={} body={}",
-                                    order.getId(), retryBody != null ? retryBody.get("status") : "null", retryMsg,
-                                    retryBody);
+                            // If it still fails, try one more time with empty order_type
+                            log.info("IThink Store Order fallback failed, trying with empty order_type for orderId={}",
+                                    order.getId());
+                            retryData.put("order_type", "");
+                            ResponseEntity<Map> finalRetryResp = restTemplate.postForEntity(url,
+                                    new HttpEntity<>(Map.of("data", retryData), headers), Map.class);
+                            Map finalRetryBody = finalRetryResp.getBody();
+                            if (finalRetryBody != null
+                                    && Objects.equals(String.valueOf(finalRetryBody.get("status")), "success")) {
+                                log.info("IThink final fallback creation success for orderId={}", order.getId());
+                                return parseSuccessResponse(order, finalRetryBody);
+                            }
+
+                            String retryMsg = extractMessage(finalRetryBody != null ? finalRetryBody : retryBody);
+                            log.warn("IThink all fallback options failed for orderId={} message={}",
+                                    order.getId(), retryMsg);
                         }
                     } catch (Exception e) {
                         log.error("IThink fallback creation error for orderId={}", order.getId(), e);
