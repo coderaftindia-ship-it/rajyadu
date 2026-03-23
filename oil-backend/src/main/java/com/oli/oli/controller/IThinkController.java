@@ -67,8 +67,23 @@ public class IThinkController {
     @Value("${ithink.serviceability.proxy-base-url:}")
     private String serviceabilityProxyBaseUrl;
 
+    @Value("${app.base-url:https://api.rajyadu.in}")
+    private String appBaseUrl;
+
     public IThinkController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+    }
+
+    private String toAbsoluteUrl(String pathOrUrl) {
+        if (pathOrUrl == null || pathOrUrl.isBlank()) {
+            return "";
+        }
+        if (pathOrUrl.toLowerCase().startsWith("http://") || pathOrUrl.toLowerCase().startsWith("https://")) {
+            return pathOrUrl;
+        }
+        String baseUrl = appBaseUrl.endsWith("/") ? appBaseUrl.substring(0, appBaseUrl.length() - 1) : appBaseUrl;
+        String path = pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl;
+        return baseUrl + path;
     }
 
     public CreateOrderResponse createOrder(OrderEntity order, List<OrderItemEntity> items) {
