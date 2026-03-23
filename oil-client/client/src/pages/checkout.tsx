@@ -672,7 +672,7 @@ export default function Checkout() {
                   {items.map((item) => (
                     <div key={`${item.product.id}:${item.selectedVariant ?? ""}`} className="flex items-center space-x-3">
                       <img
-                        src={oliAssetUrl(item.product.imageUrl) ?? item.product.imageUrl}
+                        src={oliAssetUrl(item.product.imageUrls?.[0]) ?? item.product.imageUrls?.[0] ?? "/placeholder-product.jpg"}
                         alt={item.product.name}
                         className="h-12 w-12  rounded"
                       />
