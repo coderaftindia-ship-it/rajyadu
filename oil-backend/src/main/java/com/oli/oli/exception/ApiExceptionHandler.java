@@ -51,6 +51,10 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleGenericException(Exception ex) {
         logger.error("Unexpected error occurred", ex);
-        return new ErrorResponse("An unexpected error occurred. Please try again later.", Instant.now());
+        String msg = ex.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = "An unexpected error occurred. Please try again later.";
+        }
+        return new ErrorResponse(msg, Instant.now());
     }
 }

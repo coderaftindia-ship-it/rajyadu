@@ -41,7 +41,8 @@ public class OrderController {
         this.iThinkController = iThinkController;
     }
 
-    public record OrderItemDto(Long productId, String productName, String variant, Integer quantity, BigDecimal unitPrice) {
+    public record OrderItemDto(Long productId, String productName, String variant, Integer quantity,
+            BigDecimal unitPrice, String imageUrl) {
     }
 
     public record CreateOrderRequest(
@@ -131,8 +132,10 @@ public class OrderController {
 
         if (req.items() != null) {
             for (OrderItemDto it : req.items()) {
-                if (it == null) continue;
-                if (it.quantity() == null || it.quantity() <= 0) continue;
+                if (it == null)
+                    continue;
+                if (it.quantity() == null || it.quantity() <= 0)
+                    continue;
                 OrderItemEntity e = new OrderItemEntity();
                 e.setOrder(saved);
                 e.setProductId(it.productId());
@@ -140,8 +143,10 @@ public class OrderController {
                 e.setVariant(it.variant());
                 e.setQuantity(it.quantity());
                 e.setUnitPrice(it.unitPrice());
+                e.setImageUrl(it.imageUrl());
                 orderItemRepository.save(e);
             }
+            orderItemRepository.flush();
         }
 
         if (StringUtils.hasText(saved.getDeliveryProvider())
@@ -180,7 +185,8 @@ public class OrderController {
         }
 
         List<OrderItemDto> items = orderItemRepository.findByOrder_Id(saved.getId()).stream()
-                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
+                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(),
+                        x.getUnitPrice(), null))
                 .toList();
 
         return toResponse(saved, items);
@@ -216,7 +222,8 @@ public class OrderController {
         if (StringUtils.hasText(email)) {
             return orderRepository.findByCustomerEmailIgnoreCaseOrderByCreatedAtDesc(email.trim()).stream()
                     .map(o -> toResponse(o, orderItemRepository.findByOrder_Id(o.getId()).stream()
-                            .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
+                            .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(),
+                                    x.getQuantity(), x.getUnitPrice(), null))
                             .toList()))
                     .toList();
         }
@@ -224,7 +231,8 @@ public class OrderController {
         return orderRepository.findAll().stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(o -> toResponse(o, orderItemRepository.findByOrder_Id(o.getId()).stream()
-                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
+                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(),
+                                x.getQuantity(), x.getUnitPrice(), null))
                         .toList()))
                 .toList();
     }
@@ -234,7 +242,8 @@ public class OrderController {
         OrderEntity o = orderRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         List<OrderItemDto> items = orderItemRepository.findByOrder_Id(o.getId()).stream()
-                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
+                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(),
+                        x.getUnitPrice(), null))
                 .toList();
         return toResponse(o, items);
     }
@@ -284,7 +293,8 @@ public class OrderController {
                         o.setTrackingUrl(created.message().trim());
                     }
                 } else {
-                    if (!StringUtils.hasText(o.getTrackingUrl()) && created != null && StringUtils.hasText(created.message())) {
+                    if (!StringUtils.hasText(o.getTrackingUrl()) && created != null
+                            && StringUtils.hasText(created.message())) {
                         o.setTrackingUrl(created.message().trim());
                     }
                 }
@@ -294,7 +304,8 @@ public class OrderController {
 
         OrderEntity saved = orderRepository.save(o);
         List<OrderItemDto> items = orderItemRepository.findByOrder_Id(saved.getId()).stream()
-                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
+                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(),
+                        x.getUnitPrice(), null))
                 .toList();
         return toResponse(saved, items);
     }
@@ -304,7 +315,8 @@ public class OrderController {
         return orderRepository.findAll().stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(o -> toResponse(o, orderItemRepository.findByOrder_Id(o.getId()).stream()
-                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
+                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(),
+                                x.getQuantity(), x.getUnitPrice(), null))
                         .toList()))
                 .toList();
     }

@@ -356,6 +356,7 @@ export default function Checkout() {
             variant: it.selectedVariant ?? null,
             quantity: it.quantity ?? 0,
             unitPrice: toNumber(it.product.price),
+            imageUrl: it.product.imageUrls?.[0] ?? null,
           })),
         }),
       });

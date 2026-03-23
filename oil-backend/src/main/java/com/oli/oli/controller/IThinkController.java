@@ -126,7 +126,7 @@ public class IThinkController {
                 p.put("product_tax_rate", "0");
                 p.put("product_hsn_code", "");
                 p.put("product_discount", "0");
-                p.put("product_img_url", "");
+                p.put("product_img_url", it.getImageUrl() == null ? "" : it.getImageUrl());
                 products.add(p);
             }
         }
