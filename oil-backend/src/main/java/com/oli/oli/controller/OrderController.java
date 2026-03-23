@@ -129,6 +129,7 @@ public class OrderController {
         }
 
         OrderEntity saved = orderRepository.save(o);
+        List<OrderItemEntity> savedItems = new java.util.ArrayList<>();
 
         if (req.items() != null) {
             for (OrderItemDto it : req.items()) {
@@ -144,7 +145,7 @@ public class OrderController {
                 e.setQuantity(it.quantity());
                 e.setUnitPrice(it.unitPrice());
                 e.setImageUrl(it.imageUrl());
-                orderItemRepository.save(e);
+                savedItems.add(orderItemRepository.save(e));
             }
             orderItemRepository.flush();
         }
@@ -153,8 +154,7 @@ public class OrderController {
                 && saved.getDeliveryProvider().trim().equalsIgnoreCase("IThink")
                 && !StringUtils.hasText(saved.getTrackingId())) {
             try {
-                List<OrderItemEntity> itemEntities = orderItemRepository.findByOrder_Id(saved.getId());
-                var created = iThinkController.createOrder(saved, itemEntities);
+                var created = iThinkController.createOrder(saved, savedItems);
                 if (created != null && created.success()) {
                     if (StringUtils.hasText(created.waybill())) {
                         saved.setTrackingId(created.waybill().trim());
@@ -203,9 +203,15 @@ public class OrderController {
             if (body != null && body.serviceable()) {
                 return "IThink";
             }
-            return "Manual";
-        } catch (RuntimeException ex) {
-            return "Manual";
+            // If pincode is valid, we still default to IThink even if serviceability check
+            // fails,
+            // as the user wants orders to appear on the portal whenever possible.
+            log.info("IThink serviceability failed for pincode={}, but defaulting to IThink as requested", pincode);
+            return "IThink";
+        } catch (Exception ex) {
+            log.warn("IThink serviceability check errored for pincode={}, defaulting to IThink: {}", pincode,
+                    ex.getMessage());
+            return "IThink";
         }
     }
 

@@ -58,7 +58,7 @@ public class IThinkController {
     @Value("${logistic.default.logistics:delhivery}")
     private String defaultLogistics;
 
-    @Value("${logistic.default.service-type:ground}")
+    @Value("${logistic.default.service-type:Regular}")
     private String defaultServiceType;
 
     // Optional proxy: if set, /api/ithink/serviceability will forward to this
@@ -161,10 +161,13 @@ public class IThinkController {
         BigDecimal weightKg = weightGm.divide(new BigDecimal("1000"), 3, java.math.RoundingMode.UP);
         shipment.put("weight", weightKg.stripTrailingZeros().toPlainString());
 
-        shipment.put("shipping_charges", "0");
+        shipment.put("shipping_charges", order.getShipping() == null ? "0" : order.getShipping().toPlainString());
         shipment.put("giftwrap_charges", "0");
         shipment.put("transaction_charges", "0");
-        shipment.put("total_discount", "0");
+        shipment.put("total_discount",
+                order.getSubtotal() != null && order.getTotal() != null && order.getShipping() != null
+                        ? order.getSubtotal().add(order.getShipping()).subtract(order.getTotal()).toPlainString()
+                        : "0");
         shipment.put("first_attemp_discount", "0");
 
         boolean cod = order.getPaymentMethod() != null && order.getPaymentMethod().trim().equalsIgnoreCase("cod");
