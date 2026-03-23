@@ -103,12 +103,37 @@ public class IThinkController {
         shipment.put("sub_order", "");
         shipment.put("order_date",
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
-        shipment.put("total_amount", order.getTotal() == null ? "0" : order.getTotal().toPlainString());
+        shipment.put("total_amount", order.getTotal() == null ? "0.00"
+                : order.getTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
         shipment.put("name", order.getCustomerName() == null ? "" : order.getCustomerName());
         shipment.put("company_name", "");
-        shipment.put("add", order.getShippingAddress() == null ? "" : order.getShippingAddress());
-        shipment.put("add2", "");
-        shipment.put("add3", "");
+        String fullAddr = order.getShippingAddress() == null ? "" : order.getShippingAddress().trim();
+        String add1 = fullAddr;
+        String add2 = "";
+        String add3 = "";
+
+        if (fullAddr.length() > 35) {
+            int firstComma = fullAddr.indexOf(',', 30);
+            if (firstComma != -1 && firstComma < 60) {
+                add1 = fullAddr.substring(0, firstComma + 1).trim();
+                String rest = fullAddr.substring(firstComma + 1).trim();
+                if (rest.length() > 35) {
+                    int secondComma = rest.indexOf(',', 30);
+                    if (secondComma != -1 && secondComma < 60) {
+                        add2 = rest.substring(0, secondComma + 1).trim();
+                        add3 = rest.substring(secondComma + 1).trim();
+                    } else {
+                        add2 = rest;
+                    }
+                } else {
+                    add2 = rest;
+                }
+            }
+        }
+
+        shipment.put("add", add1);
+        shipment.put("add2", add2);
+        shipment.put("add3", add3);
         shipment.put("pin", order.getShippingPincode());
         shipment.put("city", order.getShippingCity() == null ? "" : order.getShippingCity());
         shipment.put("state", order.getShippingState() == null ? "" : order.getShippingState());
@@ -140,7 +165,8 @@ public class IThinkController {
                 p.put("product_name", it.getProductName() == null ? "" : it.getProductName());
                 p.put("product_sku", it.getProductId() == null ? "" : String.valueOf(it.getProductId()));
                 p.put("product_quantity", it.getQuantity() == null ? "0" : String.valueOf(it.getQuantity()));
-                p.put("product_price", it.getUnitPrice() == null ? "0" : it.getUnitPrice().toPlainString());
+                p.put("product_price", it.getUnitPrice() == null ? "0.00"
+                        : it.getUnitPrice().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
                 p.put("product_tax_rate", "0");
                 p.put("product_hsn_code", "");
                 p.put("product_discount", "0");
@@ -161,17 +187,23 @@ public class IThinkController {
         BigDecimal weightKg = weightGm.divide(new BigDecimal("1000"), 3, java.math.RoundingMode.UP);
         shipment.put("weight", weightKg.stripTrailingZeros().toPlainString());
 
-        shipment.put("shipping_charges", order.getShipping() == null ? "0" : order.getShipping().toPlainString());
-        shipment.put("giftwrap_charges", "0");
-        shipment.put("transaction_charges", "0");
+        shipment.put("shipping_charges", order.getShipping() == null ? "0.00"
+                : order.getShipping().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+        shipment.put("giftwrap_charges", "0.00");
+        shipment.put("transaction_charges", "0.00");
         shipment.put("total_discount",
                 order.getSubtotal() != null && order.getTotal() != null && order.getShipping() != null
-                        ? order.getSubtotal().add(order.getShipping()).subtract(order.getTotal()).toPlainString()
-                        : "0");
-        shipment.put("first_attemp_discount", "0");
+                        ? order.getSubtotal().add(order.getShipping()).subtract(order.getTotal())
+                                .setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()
+                        : "0.00");
+        shipment.put("first_attemp_discount", "0.00");
 
         boolean cod = order.getPaymentMethod() != null && order.getPaymentMethod().trim().equalsIgnoreCase("cod");
-        shipment.put("cod_amount", cod ? (order.getTotal() == null ? "0" : order.getTotal().toPlainString()) : "0");
+        shipment.put(
+                "cod_amount", cod
+                        ? (order.getTotal() == null ? "0.00"
+                                : order.getTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString())
+                        : "0.00");
         shipment.put("payment_mode", cod ? "COD" : "Prepaid");
 
         shipment.put("reseller_name", "");
@@ -209,31 +241,50 @@ public class IThinkController {
             String status = statusObj == null ? "" : String.valueOf(statusObj);
             if (!Objects.equals(status, "success")) {
                 String msg = extractMessage(body);
+                // Fallback: If booking is disabled, try creating without logistics assignment
+                // so the order at least appears on the portal in "Store Order" tab.
+                if (msg != null && (msg.toLowerCase().contains("booking is temporarily disabled")
+                        || msg.toLowerCase().contains("finance team"))) {
+                    log.info("IThink booking disabled for orderId={}, attempting fallback creation without logistics",
+                            order.getId());
+                    data.put("logistics", "");
+                    data.put("s_type", "");
+                    ResponseEntity<Map> retryResp = restTemplate.postForEntity(url,
+                            new HttpEntity<>(Map.of("data", data), headers), Map.class);
+                    Map retryBody = retryResp.getBody();
+                    if (retryBody != null && Objects.equals(String.valueOf(retryBody.get("status")), "success")) {
+                        log.info("IThink fallback creation success for orderId={}", order.getId());
+                        return parseSuccessResponse(order, retryBody);
+                    }
+                }
                 log.warn("IThink createOrder failed orderId={} status={} message={}", order.getId(), status, msg);
                 return new CreateOrderResponse(false, null, null, null, msg, body);
             }
 
-            Object dataObj = body.get("data");
-            if (dataObj instanceof Map<?, ?> m) {
-                Object firstObj = m.get("1");
-                if (firstObj instanceof Map<?, ?> first) {
-                    String waybill = first.get("waybill") == null ? null : String.valueOf(first.get("waybill"));
-                    String trackingUrl = first.get("tracking_url") == null ? null
-                            : String.valueOf(first.get("tracking_url"));
-                    String logistics = first.get("logistic_name") == null ? null
-                            : String.valueOf(first.get("logistic_name"));
-                    log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}",
-                            order.getId(), waybill, logistics, trackingUrl);
-                    return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
-                }
-            }
-
-            log.info("IThink createOrder success orderId={} waybill=<none>", order.getId());
-            return new CreateOrderResponse(true, null, null, null, "OK", body);
+            return parseSuccessResponse(order, body);
         } catch (RestClientException ex) {
             log.error("IThink createOrder error orderId={}", order.getId(), ex);
             return new CreateOrderResponse(false, null, null, null, "Failed to create order", ex.getMessage());
         }
+    }
+
+    private CreateOrderResponse parseSuccessResponse(OrderEntity order, Map body) {
+        Object dataObj = body.get("data");
+        if (dataObj instanceof Map<?, ?> m) {
+            Object firstObj = m.get("1");
+            if (firstObj instanceof Map<?, ?> first) {
+                String waybill = first.get("waybill") == null ? null : String.valueOf(first.get("waybill"));
+                String trackingUrl = first.get("tracking_url") == null ? null
+                        : String.valueOf(first.get("tracking_url"));
+                String logistics = first.get("logistic_name") == null ? null
+                        : String.valueOf(first.get("logistic_name"));
+                log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}",
+                        order.getId(), waybill, logistics, trackingUrl);
+                return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
+            }
+        }
+        log.info("IThink createOrder success orderId={} waybill=<none>", order.getId());
+        return new CreateOrderResponse(true, null, null, null, "OK", body);
     }
 
     private static String extractMessage(Map body) {

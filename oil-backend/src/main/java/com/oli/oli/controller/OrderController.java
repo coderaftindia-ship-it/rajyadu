@@ -162,6 +162,9 @@ public class OrderController {
                     if (StringUtils.hasText(created.trackingUrl())) {
                         saved.setTrackingUrl(created.trackingUrl().trim());
                     }
+                    if (!StringUtils.hasText(saved.getTrackingId()) && !StringUtils.hasText(saved.getTrackingUrl())) {
+                        saved.setTrackingUrl("Order Created on Portal (Manual Booking Required)");
+                    }
                 } else {
                     String msg = (created != null && StringUtils.hasText(created.message()))
                             ? created.message().trim()
@@ -286,9 +289,8 @@ public class OrderController {
                     if (StringUtils.hasText(created.trackingUrl())) {
                         o.setTrackingUrl(created.trackingUrl().trim());
                     }
-                    if (!StringUtils.hasText(o.getTrackingId()) && !StringUtils.hasText(o.getTrackingUrl())
-                            && StringUtils.hasText(created.message())) {
-                        o.setTrackingUrl(created.message().trim());
+                    if (!StringUtils.hasText(o.getTrackingId()) && !StringUtils.hasText(o.getTrackingUrl())) {
+                        o.setTrackingUrl("Order Created on Portal (Manual Booking Required)");
                     }
                 } else {
                     if (!StringUtils.hasText(o.getTrackingUrl()) && created != null
