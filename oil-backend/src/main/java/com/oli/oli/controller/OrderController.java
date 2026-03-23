@@ -105,7 +105,7 @@ public class OrderController {
         }
 
         String id = StringUtils.hasText(req.id()) ? req.id().trim()
-                : ("ORD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase());
+                : ("ORD_" + System.currentTimeMillis());
 
         OrderEntity o = new OrderEntity();
         o.setId(id);

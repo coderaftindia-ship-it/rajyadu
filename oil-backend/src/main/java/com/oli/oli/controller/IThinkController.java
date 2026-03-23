@@ -184,7 +184,7 @@ public class IThinkController {
         data.put("secret_key", secretKey);
         data.put("logistics", defaultLogistics);
         data.put("s_type", defaultServiceType);
-        data.put("order_type", "");
+        data.put("order_type", "forward");
 
         Map<String, Object> payload = Map.of("data", data);
 
