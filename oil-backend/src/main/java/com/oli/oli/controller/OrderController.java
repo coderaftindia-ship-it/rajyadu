@@ -155,32 +155,24 @@ public class OrderController {
             try {
                 List<OrderItemEntity> itemEntities = orderItemRepository.findByOrder_Id(saved.getId());
                 var created = iThinkController.createOrder(saved, itemEntities);
-                if (created == null || !created.success()) {
+                if (created != null && created.success()) {
+                    if (StringUtils.hasText(created.waybill())) {
+                        saved.setTrackingId(created.waybill().trim());
+                    }
+                    if (StringUtils.hasText(created.trackingUrl())) {
+                        saved.setTrackingUrl(created.trackingUrl().trim());
+                    }
+                } else {
                     String msg = (created != null && StringUtils.hasText(created.message()))
                             ? created.message().trim()
                             : "Failed to create shipment with logistics provider";
-                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, msg);
-                }
-
-                if (StringUtils.hasText(created.waybill())) {
-                    saved.setTrackingId(created.waybill().trim());
-                }
-                if (StringUtils.hasText(created.trackingUrl())) {
-                    saved.setTrackingUrl(created.trackingUrl().trim());
-                }
-                if (!StringUtils.hasText(saved.getTrackingId()) && !StringUtils.hasText(saved.getTrackingUrl())
-                        && StringUtils.hasText(created.message())) {
-                    saved.setTrackingUrl(created.message().trim());
+                    log.warn("IThink order creation failed for orderId={}: {}", saved.getId(), msg);
+                    saved.setTrackingUrl("Automatic Booking Failed: " + msg);
                 }
 
                 saved = orderRepository.save(saved);
-            } catch (ResponseStatusException ex) {
-                log.warn("IThink order creation failed for orderId={}: {}", saved.getId(), ex.getReason());
-                throw ex;
-            } catch (RuntimeException ex) {
+            } catch (Exception ex) {
                 log.error("IThink order creation error for orderId={}", saved.getId(), ex);
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                        "Failed to create shipment with logistics provider");
             }
         }
 
