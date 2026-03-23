@@ -61,7 +61,8 @@ public class IThinkController {
     @Value("${logistic.default.service-type:ground}")
     private String defaultServiceType;
 
-    // Optional proxy: if set, /api/ithink/serviceability will forward to this upstream
+    // Optional proxy: if set, /api/ithink/serviceability will forward to this
+    // upstream
     // Example: http://localshot:8085
     @Value("${ithink.serviceability.proxy-base-url:}")
     private String serviceabilityProxyBaseUrl;
@@ -85,7 +86,8 @@ public class IThinkController {
         shipment.put("waybill", "");
         shipment.put("order", order.getId());
         shipment.put("sub_order", "");
-        shipment.put("order_date", java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
+        shipment.put("order_date",
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
         shipment.put("total_amount", order.getTotal() == null ? "0" : order.getTotal().toPlainString());
         shipment.put("name", order.getCustomerName() == null ? "" : order.getCustomerName());
         shipment.put("company_name", "");
@@ -117,7 +119,8 @@ public class IThinkController {
         List<Map<String, Object>> products = new java.util.ArrayList<>();
         if (items != null) {
             for (OrderItemEntity it : items) {
-                if (it == null) continue;
+                if (it == null)
+                    continue;
                 Map<String, Object> p = new HashMap<>();
                 p.put("product_name", it.getProductName() == null ? "" : it.getProductName());
                 p.put("product_sku", it.getProductId() == null ? "" : String.valueOf(it.getProductId()));
@@ -126,7 +129,7 @@ public class IThinkController {
                 p.put("product_tax_rate", "0");
                 p.put("product_hsn_code", "");
                 p.put("product_discount", "0");
-                p.put("product_img_url", it.getImageUrl() == null ? "" : it.getImageUrl());
+                p.put("product_img_url", toAbsoluteUrl(it.getImageUrl()));
                 products.add(p);
             }
         }
@@ -136,7 +139,9 @@ public class IThinkController {
         shipment.put("shipment_width", "10");
         shipment.put("shipment_height", "10");
 
-        int qty = items == null ? 0 : items.stream().filter(Objects::nonNull).mapToInt(x -> x.getQuantity() == null ? 0 : x.getQuantity()).sum();
+        int qty = items == null ? 0
+                : items.stream().filter(Objects::nonNull).mapToInt(x -> x.getQuantity() == null ? 0 : x.getQuantity())
+                        .sum();
         BigDecimal weightGm = BigDecimal.valueOf(Math.max(400, qty * 500));
         BigDecimal weightKg = weightGm.divide(new BigDecimal("1000"), 3, java.math.RoundingMode.UP);
         shipment.put("weight", weightKg.stripTrailingZeros().toPlainString());
@@ -172,7 +177,8 @@ public class IThinkController {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            log.info("IThink createOrder request orderId={} pickupAddressId={} returnAddressId={} logistics={} s_type={} paymentMode={} weight={} url={}",
+            log.info(
+                    "IThink createOrder request orderId={} pickupAddressId={} returnAddressId={} logistics={} s_type={} paymentMode={} weight={} url={}",
                     order.getId(), pickupAddressId, returnAddressId, defaultLogistics, defaultServiceType,
                     shipment.get("payment_mode"), shipment.get("weight"), url);
             ResponseEntity<Map> resp = restTemplate.postForEntity(url, new HttpEntity<>(payload, headers), Map.class);
@@ -194,9 +200,12 @@ public class IThinkController {
                 Object firstObj = m.get("1");
                 if (firstObj instanceof Map<?, ?> first) {
                     String waybill = first.get("waybill") == null ? null : String.valueOf(first.get("waybill"));
-                    String trackingUrl = first.get("tracking_url") == null ? null : String.valueOf(first.get("tracking_url"));
-                    String logistics = first.get("logistic_name") == null ? null : String.valueOf(first.get("logistic_name"));
-                    log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}", order.getId(), waybill, logistics, trackingUrl);
+                    String trackingUrl = first.get("tracking_url") == null ? null
+                            : String.valueOf(first.get("tracking_url"));
+                    String logistics = first.get("logistic_name") == null ? null
+                            : String.valueOf(first.get("logistic_name"));
+                    log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}",
+                            order.getId(), waybill, logistics, trackingUrl);
                     return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
                 }
             }
@@ -279,12 +288,14 @@ public class IThinkController {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            log.info("IThink serviceability request fromPincode={} toPincode={} weightKg={} cod={} productMrp={} url={}",
+            log.info(
+                    "IThink serviceability request fromPincode={} toPincode={} weightKg={} cod={} productMrp={} url={}",
                     pickupPincode, deliveryPincode, weightKg, cod, productMrp, url);
             ResponseEntity<Map> resp = restTemplate.postForEntity(url, new HttpEntity<>(payload, headers), Map.class);
             Map body = resp.getBody();
             if (body == null) {
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Empty response from logistics provider", null));
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO,
+                        "Empty response from logistics provider", null));
             }
 
             Object statusObj = body.get("status");
@@ -298,14 +309,16 @@ public class IThinkController {
             BigDecimal minRate = extractMinRate(dataObj);
             if (minRate == null) {
                 log.info("IThink serviceability rate-not-available toPincode={}", deliveryPincode);
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Rate not available", body));
+                return ResponseEntity
+                        .ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Rate not available", body));
             }
 
             log.info("IThink serviceability serviceable toPincode={} minRate={}", deliveryPincode, minRate);
             return ResponseEntity.ok(new ServiceabilityResponse(true, minRate, "OK", body));
         } catch (RestClientException ex) {
             log.error("IThink serviceability error toPincode={}", deliveryPincode, ex);
-            return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Failed to fetch rate", ex.getMessage()));
+            return ResponseEntity
+                    .ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Failed to fetch rate", ex.getMessage()));
         }
     }
 
@@ -317,7 +330,8 @@ public class IThinkController {
             @RequestParam(value = "cod", defaultValue = "false") boolean cod,
             @RequestParam(value = "productMrp", defaultValue = "0") BigDecimal productMrp) {
 
-        // If proxy is configured, forward request upstream and pass-through body/content-type.
+        // If proxy is configured, forward request upstream and pass-through
+        // body/content-type.
         if (serviceabilityProxyBaseUrl != null && !serviceabilityProxyBaseUrl.isBlank()) {
             String upstreamBase = normalizeBaseUrl(serviceabilityProxyBaseUrl);
             String upstreamUrl = UriComponentsBuilder
@@ -328,14 +342,16 @@ public class IThinkController {
 
             try {
                 log.info("IThink serviceability proxy call to upstreamUrl={}", upstreamUrl);
-                ResponseEntity<String> upstreamResp = restTemplate.exchange(upstreamUrl, HttpMethod.GET, HttpEntity.EMPTY, String.class);
+                ResponseEntity<String> upstreamResp = restTemplate.exchange(upstreamUrl, HttpMethod.GET,
+                        HttpEntity.EMPTY, String.class);
                 HttpHeaders headers = new HttpHeaders();
                 MediaType ct = upstreamResp.getHeaders().getContentType();
                 headers.setContentType(ct != null ? ct : MediaType.APPLICATION_JSON);
                 return new ResponseEntity(upstreamResp.getBody(), headers, upstreamResp.getStatusCode());
             } catch (RestClientException ex) {
                 log.error("IThink serviceability proxy error upstreamUrl={}", upstreamUrl, ex);
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Failed to fetch serviceability", ex.getMessage()));
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO,
+                        "Failed to fetch serviceability", ex.getMessage()));
             }
         }
 
