@@ -41,8 +41,7 @@ public class OrderController {
         this.iThinkController = iThinkController;
     }
 
-    public record OrderItemDto(Long productId, String productName, String variant, Integer quantity,
-            BigDecimal unitPrice, String imageUrl) {
+    public record OrderItemDto(Long productId, String productName, String variant, Integer quantity, BigDecimal unitPrice) {
     }
 
     public record CreateOrderRequest(
@@ -105,7 +104,7 @@ public class OrderController {
         }
 
         String id = StringUtils.hasText(req.id()) ? req.id().trim()
-                : ("ORD_" + System.currentTimeMillis());
+                : ("ORD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase());
 
         OrderEntity o = new OrderEntity();
         o.setId(id);
@@ -129,14 +128,11 @@ public class OrderController {
         }
 
         OrderEntity saved = orderRepository.save(o);
-        List<OrderItemEntity> savedItems = new java.util.ArrayList<>();
 
         if (req.items() != null) {
             for (OrderItemDto it : req.items()) {
-                if (it == null)
-                    continue;
-                if (it.quantity() == null || it.quantity() <= 0)
-                    continue;
+                if (it == null) continue;
+                if (it.quantity() == null || it.quantity() <= 0) continue;
                 OrderItemEntity e = new OrderItemEntity();
                 e.setOrder(saved);
                 e.setProductId(it.productId());
@@ -144,44 +140,47 @@ public class OrderController {
                 e.setVariant(it.variant());
                 e.setQuantity(it.quantity());
                 e.setUnitPrice(it.unitPrice());
-                e.setImageUrl(it.imageUrl());
-                savedItems.add(orderItemRepository.save(e));
+                orderItemRepository.save(e);
             }
-            orderItemRepository.flush();
         }
 
         if (StringUtils.hasText(saved.getDeliveryProvider())
                 && saved.getDeliveryProvider().trim().equalsIgnoreCase("IThink")
                 && !StringUtils.hasText(saved.getTrackingId())) {
             try {
-                var created = iThinkController.createOrder(saved, savedItems);
-                if (created != null && created.success()) {
-                    if (StringUtils.hasText(created.waybill())) {
-                        saved.setTrackingId(created.waybill().trim());
-                    }
-                    if (StringUtils.hasText(created.trackingUrl())) {
-                        saved.setTrackingUrl(created.trackingUrl().trim());
-                    }
-                    if (!StringUtils.hasText(saved.getTrackingId()) && !StringUtils.hasText(saved.getTrackingUrl())) {
-                        saved.setTrackingUrl("Order Created on Portal (Manual Booking Required)");
-                    }
-                } else {
+                List<OrderItemEntity> itemEntities = orderItemRepository.findByOrder_Id(saved.getId());
+                var created = iThinkController.createOrder(saved, itemEntities);
+                if (created == null || !created.success()) {
                     String msg = (created != null && StringUtils.hasText(created.message()))
                             ? created.message().trim()
                             : "Failed to create shipment with logistics provider";
-                    log.warn("IThink order creation failed for orderId={}: {}", saved.getId(), msg);
-                    saved.setTrackingUrl("Automatic Booking Failed: " + msg);
+                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, msg);
+                }
+
+                if (StringUtils.hasText(created.waybill())) {
+                    saved.setTrackingId(created.waybill().trim());
+                }
+                if (StringUtils.hasText(created.trackingUrl())) {
+                    saved.setTrackingUrl(created.trackingUrl().trim());
+                }
+                if (!StringUtils.hasText(saved.getTrackingId()) && !StringUtils.hasText(saved.getTrackingUrl())
+                        && StringUtils.hasText(created.message())) {
+                    saved.setTrackingUrl(created.message().trim());
                 }
 
                 saved = orderRepository.save(saved);
-            } catch (Exception ex) {
+            } catch (ResponseStatusException ex) {
+                log.warn("IThink order creation failed for orderId={}: {}", saved.getId(), ex.getReason());
+                throw ex;
+            } catch (RuntimeException ex) {
                 log.error("IThink order creation error for orderId={}", saved.getId(), ex);
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "Failed to create shipment with logistics provider");
             }
         }
 
         List<OrderItemDto> items = orderItemRepository.findByOrder_Id(saved.getId()).stream()
-                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(),
-                        x.getUnitPrice(), null))
+                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
                 .toList();
 
         return toResponse(saved, items);
@@ -206,15 +205,9 @@ public class OrderController {
             if (body != null && body.serviceable()) {
                 return "IThink";
             }
-            // If pincode is valid, we still default to IThink even if serviceability check
-            // fails,
-            // as the user wants orders to appear on the portal whenever possible.
-            log.info("IThink serviceability failed for pincode={}, but defaulting to IThink as requested", pincode);
-            return "IThink";
-        } catch (Exception ex) {
-            log.warn("IThink serviceability check errored for pincode={}, defaulting to IThink: {}", pincode,
-                    ex.getMessage());
-            return "IThink";
+            return "Manual";
+        } catch (RuntimeException ex) {
+            return "Manual";
         }
     }
 
@@ -223,8 +216,7 @@ public class OrderController {
         if (StringUtils.hasText(email)) {
             return orderRepository.findByCustomerEmailIgnoreCaseOrderByCreatedAtDesc(email.trim()).stream()
                     .map(o -> toResponse(o, orderItemRepository.findByOrder_Id(o.getId()).stream()
-                            .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(),
-                                    x.getQuantity(), x.getUnitPrice(), null))
+                            .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
                             .toList()))
                     .toList();
         }
@@ -232,8 +224,7 @@ public class OrderController {
         return orderRepository.findAll().stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(o -> toResponse(o, orderItemRepository.findByOrder_Id(o.getId()).stream()
-                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(),
-                                x.getQuantity(), x.getUnitPrice(), null))
+                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
                         .toList()))
                 .toList();
     }
@@ -243,8 +234,7 @@ public class OrderController {
         OrderEntity o = orderRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         List<OrderItemDto> items = orderItemRepository.findByOrder_Id(o.getId()).stream()
-                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(),
-                        x.getUnitPrice(), null))
+                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
                 .toList();
         return toResponse(o, items);
     }
@@ -259,19 +249,19 @@ public class OrderController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
         if (req != null) {
-            if (req.status() != null) {
+            if (StringUtils.hasText(req.status())) {
                 o.setStatus(req.status().trim());
             }
-            if (req.paymentStatus() != null) {
+            if (StringUtils.hasText(req.paymentStatus())) {
                 o.setPaymentStatus(req.paymentStatus().trim());
             }
-            if (req.deliveryProvider() != null) {
+            if (StringUtils.hasText(req.deliveryProvider())) {
                 o.setDeliveryProvider(req.deliveryProvider().trim());
             }
-            if (req.trackingId() != null) {
+            if (StringUtils.hasText(req.trackingId())) {
                 o.setTrackingId(req.trackingId().trim());
             }
-            if (req.trackingUrl() != null) {
+            if (StringUtils.hasText(req.trackingUrl())) {
                 o.setTrackingUrl(req.trackingUrl().trim());
             }
         }
@@ -289,18 +279,13 @@ public class OrderController {
                     if (StringUtils.hasText(created.trackingUrl())) {
                         o.setTrackingUrl(created.trackingUrl().trim());
                     }
-                    if (!StringUtils.hasText(o.getTrackingId()) && !StringUtils.hasText(o.getTrackingUrl())) {
-                        o.setTrackingUrl("Order Created on Portal (Manual Booking Required)");
+                    if (!StringUtils.hasText(o.getTrackingId()) && !StringUtils.hasText(o.getTrackingUrl())
+                            && StringUtils.hasText(created.message())) {
+                        o.setTrackingUrl(created.message().trim());
                     }
                 } else {
-                    if (created != null && StringUtils.hasText(created.message())) {
-                        String msg = created.message().trim();
-                        // Avoid double prefixing
-                        if (msg.startsWith("Automatic Booking Failed: ")) {
-                            o.setTrackingUrl(msg);
-                        } else {
-                            o.setTrackingUrl("Automatic Booking Failed: " + msg);
-                        }
+                    if (!StringUtils.hasText(o.getTrackingUrl()) && created != null && StringUtils.hasText(created.message())) {
+                        o.setTrackingUrl(created.message().trim());
                     }
                 }
             } catch (RuntimeException ignored) {
@@ -309,8 +294,7 @@ public class OrderController {
 
         OrderEntity saved = orderRepository.save(o);
         List<OrderItemDto> items = orderItemRepository.findByOrder_Id(saved.getId()).stream()
-                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(),
-                        x.getUnitPrice(), null))
+                .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
                 .toList();
         return toResponse(saved, items);
     }
@@ -320,8 +304,7 @@ public class OrderController {
         return orderRepository.findAll().stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(o -> toResponse(o, orderItemRepository.findByOrder_Id(o.getId()).stream()
-                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(),
-                                x.getQuantity(), x.getUnitPrice(), null))
+                        .map(x -> new OrderItemDto(x.getProductId(), x.getProductName(), x.getVariant(), x.getQuantity(), x.getUnitPrice()))
                         .toList()))
                 .toList();
     }

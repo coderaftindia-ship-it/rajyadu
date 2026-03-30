@@ -58,32 +58,16 @@ public class IThinkController {
     @Value("${logistic.default.logistics:delhivery}")
     private String defaultLogistics;
 
-    @Value("${logistic.default.service-type:Regular}")
+    @Value("${logistic.default.service-type:ground}")
     private String defaultServiceType;
 
-    // Optional proxy: if set, /api/ithink/serviceability will forward to this
-    // upstream
+    // Optional proxy: if set, /api/ithink/serviceability will forward to this upstream
     // Example: http://localshot:8085
     @Value("${ithink.serviceability.proxy-base-url:}")
     private String serviceabilityProxyBaseUrl;
 
-    @Value("${app.base-url:https://api.rajyadu.in}")
-    private String appBaseUrl;
-
     public IThinkController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-    }
-
-    private String toAbsoluteUrl(String pathOrUrl) {
-        if (pathOrUrl == null || pathOrUrl.isBlank()) {
-            return "";
-        }
-        if (pathOrUrl.toLowerCase().startsWith("http://") || pathOrUrl.toLowerCase().startsWith("https://")) {
-            return pathOrUrl;
-        }
-        String baseUrl = appBaseUrl.endsWith("/") ? appBaseUrl.substring(0, appBaseUrl.length() - 1) : appBaseUrl;
-        String path = pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl;
-        return baseUrl + path;
     }
 
     public CreateOrderResponse createOrder(OrderEntity order, List<OrderItemEntity> items) {
@@ -101,39 +85,13 @@ public class IThinkController {
         shipment.put("waybill", "");
         shipment.put("order", order.getId());
         shipment.put("sub_order", "");
-        shipment.put("order_date",
-                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
-        shipment.put("total_amount", order.getTotal() == null ? "0.00"
-                : order.getTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+        shipment.put("order_date", java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
+        shipment.put("total_amount", order.getTotal() == null ? "0" : order.getTotal().toPlainString());
         shipment.put("name", order.getCustomerName() == null ? "" : order.getCustomerName());
         shipment.put("company_name", "");
-        String fullAddr = order.getShippingAddress() == null ? "" : order.getShippingAddress().trim();
-        String add1 = fullAddr;
-        String add2 = "";
-        String add3 = "";
-
-        if (fullAddr.length() > 35) {
-            int firstComma = fullAddr.indexOf(',', 30);
-            if (firstComma != -1 && firstComma < 60) {
-                add1 = fullAddr.substring(0, firstComma + 1).trim();
-                String rest = fullAddr.substring(firstComma + 1).trim();
-                if (rest.length() > 35) {
-                    int secondComma = rest.indexOf(',', 30);
-                    if (secondComma != -1 && secondComma < 60) {
-                        add2 = rest.substring(0, secondComma + 1).trim();
-                        add3 = rest.substring(secondComma + 1).trim();
-                    } else {
-                        add2 = rest;
-                    }
-                } else {
-                    add2 = rest;
-                }
-            }
-        }
-
-        shipment.put("add", add1);
-        shipment.put("add2", add2);
-        shipment.put("add3", add3);
+        shipment.put("add", order.getShippingAddress() == null ? "" : order.getShippingAddress());
+        shipment.put("add2", "");
+        shipment.put("add3", "");
         shipment.put("pin", order.getShippingPincode());
         shipment.put("city", order.getShippingCity() == null ? "" : order.getShippingCity());
         shipment.put("state", order.getShippingState() == null ? "" : order.getShippingState());
@@ -159,18 +117,16 @@ public class IThinkController {
         List<Map<String, Object>> products = new java.util.ArrayList<>();
         if (items != null) {
             for (OrderItemEntity it : items) {
-                if (it == null)
-                    continue;
+                if (it == null) continue;
                 Map<String, Object> p = new HashMap<>();
                 p.put("product_name", it.getProductName() == null ? "" : it.getProductName());
                 p.put("product_sku", it.getProductId() == null ? "" : String.valueOf(it.getProductId()));
                 p.put("product_quantity", it.getQuantity() == null ? "0" : String.valueOf(it.getQuantity()));
-                p.put("product_price", it.getUnitPrice() == null ? "0.00"
-                        : it.getUnitPrice().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+                p.put("product_price", it.getUnitPrice() == null ? "0" : it.getUnitPrice().toPlainString());
                 p.put("product_tax_rate", "0");
                 p.put("product_hsn_code", "");
                 p.put("product_discount", "0");
-                p.put("product_img_url", toAbsoluteUrl(it.getImageUrl()));
+                p.put("product_img_url", "");
                 products.add(p);
             }
         }
@@ -180,30 +136,19 @@ public class IThinkController {
         shipment.put("shipment_width", "10");
         shipment.put("shipment_height", "10");
 
-        int qty = items == null ? 0
-                : items.stream().filter(Objects::nonNull).mapToInt(x -> x.getQuantity() == null ? 0 : x.getQuantity())
-                        .sum();
+        int qty = items == null ? 0 : items.stream().filter(Objects::nonNull).mapToInt(x -> x.getQuantity() == null ? 0 : x.getQuantity()).sum();
         BigDecimal weightGm = BigDecimal.valueOf(Math.max(400, qty * 500));
         BigDecimal weightKg = weightGm.divide(new BigDecimal("1000"), 3, java.math.RoundingMode.UP);
         shipment.put("weight", weightKg.stripTrailingZeros().toPlainString());
 
-        shipment.put("shipping_charges", order.getShipping() == null ? "0.00"
-                : order.getShipping().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
-        shipment.put("giftwrap_charges", "0.00");
-        shipment.put("transaction_charges", "0.00");
-        shipment.put("total_discount",
-                order.getSubtotal() != null && order.getTotal() != null && order.getShipping() != null
-                        ? order.getSubtotal().add(order.getShipping()).subtract(order.getTotal())
-                                .setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()
-                        : "0.00");
-        shipment.put("first_attemp_discount", "0.00");
+        shipment.put("shipping_charges", "0");
+        shipment.put("giftwrap_charges", "0");
+        shipment.put("transaction_charges", "0");
+        shipment.put("total_discount", "0");
+        shipment.put("first_attemp_discount", "0");
 
         boolean cod = order.getPaymentMethod() != null && order.getPaymentMethod().trim().equalsIgnoreCase("cod");
-        shipment.put(
-                "cod_amount", cod
-                        ? (order.getTotal() == null ? "0.00"
-                                : order.getTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString())
-                        : "0.00");
+        shipment.put("cod_amount", cod ? (order.getTotal() == null ? "0" : order.getTotal().toPlainString()) : "0");
         shipment.put("payment_mode", cod ? "COD" : "Prepaid");
 
         shipment.put("reseller_name", "");
@@ -219,7 +164,7 @@ public class IThinkController {
         data.put("secret_key", secretKey);
         data.put("logistics", defaultLogistics);
         data.put("s_type", defaultServiceType);
-        data.put("order_type", "forward");
+        data.put("order_type", "");
 
         Map<String, Object> payload = Map.of("data", data);
 
@@ -227,8 +172,7 @@ public class IThinkController {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            log.info(
-                    "IThink createOrder request orderId={} pickupAddressId={} returnAddressId={} logistics={} s_type={} paymentMode={} weight={} url={}",
+            log.info("IThink createOrder request orderId={} pickupAddressId={} returnAddressId={} logistics={} s_type={} paymentMode={} weight={} url={}",
                     order.getId(), pickupAddressId, returnAddressId, defaultLogistics, defaultServiceType,
                     shipment.get("payment_mode"), shipment.get("weight"), url);
             ResponseEntity<Map> resp = restTemplate.postForEntity(url, new HttpEntity<>(payload, headers), Map.class);
@@ -241,82 +185,28 @@ public class IThinkController {
             String status = statusObj == null ? "" : String.valueOf(statusObj);
             if (!Objects.equals(status, "success")) {
                 String msg = extractMessage(body);
-                // Fallback: If booking is disabled, try creating without logistics assignment
-                // so the order at least appears on the portal in "Store Order" tab.
-                if (msg != null && (msg.toLowerCase().contains("booking is temporarily disabled")
-                        || msg.toLowerCase().contains("finance team")
-                        || msg.toLowerCase().contains("wallet")
-                        || msg.toLowerCase().contains("balance")
-                        || msg.toLowerCase().contains("insufficient funds"))) {
-                    log.info(
-                            "IThink booking restriction detected for orderId={}, attempting fallback creation for Store Order",
-                            order.getId());
-
-                    Map<String, Object> retryData = new HashMap<>(data);
-                    // Remove logistics and s_type to try and create as a "Store Order"
-                    retryData.remove("logistics");
-                    retryData.remove("s_type");
-                    // Also try with empty order_type if needed, but let's try removing logistics
-                    // first
-
-                    try {
-                        ResponseEntity<Map> retryResp = restTemplate.postForEntity(url,
-                                new HttpEntity<>(Map.of("data", retryData), headers), Map.class);
-                        Map retryBody = retryResp.getBody();
-                        if (retryBody != null && Objects.equals(String.valueOf(retryBody.get("status")), "success")) {
-                            log.info("IThink Store Order fallback creation success for orderId={}", order.getId());
-                            return parseSuccessResponse(order, retryBody);
-                        } else {
-                            // If it still fails, try one more time with empty order_type
-                            log.info("IThink Store Order fallback failed, trying with empty order_type for orderId={}",
-                                    order.getId());
-                            retryData.put("order_type", "");
-                            ResponseEntity<Map> finalRetryResp = restTemplate.postForEntity(url,
-                                    new HttpEntity<>(Map.of("data", retryData), headers), Map.class);
-                            Map finalRetryBody = finalRetryResp.getBody();
-                            if (finalRetryBody != null
-                                    && Objects.equals(String.valueOf(finalRetryBody.get("status")), "success")) {
-                                log.info("IThink final fallback creation success for orderId={}", order.getId());
-                                return parseSuccessResponse(order, finalRetryBody);
-                            }
-
-                            String retryMsg = extractMessage(finalRetryBody != null ? finalRetryBody : retryBody);
-                            log.warn("IThink all fallback options failed for orderId={} message={}",
-                                    order.getId(), retryMsg);
-                        }
-                    } catch (Exception e) {
-                        log.error("IThink fallback creation error for orderId={}", order.getId(), e);
-                    }
-                }
-                log.warn("IThink createOrder failed orderId={} status={} message={} body={}", order.getId(), status,
-                        msg, body);
+                log.warn("IThink createOrder failed orderId={} status={} message={}", order.getId(), status, msg);
                 return new CreateOrderResponse(false, null, null, null, msg, body);
             }
 
-            return parseSuccessResponse(order, body);
+            Object dataObj = body.get("data");
+            if (dataObj instanceof Map<?, ?> m) {
+                Object firstObj = m.get("1");
+                if (firstObj instanceof Map<?, ?> first) {
+                    String waybill = first.get("waybill") == null ? null : String.valueOf(first.get("waybill"));
+                    String trackingUrl = first.get("tracking_url") == null ? null : String.valueOf(first.get("tracking_url"));
+                    String logistics = first.get("logistic_name") == null ? null : String.valueOf(first.get("logistic_name"));
+                    log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}", order.getId(), waybill, logistics, trackingUrl);
+                    return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
+                }
+            }
+
+            log.info("IThink createOrder success orderId={} waybill=<none>", order.getId());
+            return new CreateOrderResponse(true, null, null, null, "OK", body);
         } catch (RestClientException ex) {
             log.error("IThink createOrder error orderId={}", order.getId(), ex);
             return new CreateOrderResponse(false, null, null, null, "Failed to create order", ex.getMessage());
         }
-    }
-
-    private CreateOrderResponse parseSuccessResponse(OrderEntity order, Map body) {
-        Object dataObj = body.get("data");
-        if (dataObj instanceof Map<?, ?> m) {
-            Object firstObj = m.get("1");
-            if (firstObj instanceof Map<?, ?> first) {
-                String waybill = first.get("waybill") == null ? null : String.valueOf(first.get("waybill"));
-                String trackingUrl = first.get("tracking_url") == null ? null
-                        : String.valueOf(first.get("tracking_url"));
-                String logistics = first.get("logistic_name") == null ? null
-                        : String.valueOf(first.get("logistic_name"));
-                log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}",
-                        order.getId(), waybill, logistics, trackingUrl);
-                return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
-            }
-        }
-        log.info("IThink createOrder success orderId={} waybill=<none>", order.getId());
-        return new CreateOrderResponse(true, null, null, null, "OK", body);
     }
 
     private static String extractMessage(Map body) {
@@ -364,7 +254,7 @@ public class IThinkController {
         if (weightKg == null || weightKg.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Invalid weight");
         }
-        if (productMrp == null || productMrp.compareTo(BigDecimal.ZERO) <= 0) {
+        if (productMrp == null || productMrp.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Invalid productMrp");
         }
 
@@ -389,39 +279,33 @@ public class IThinkController {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            log.info(
-                    "IThink serviceability request fromPincode={} toPincode={} weightKg={} cod={} productMrp={} url={}",
+            log.info("IThink serviceability request fromPincode={} toPincode={} weightKg={} cod={} productMrp={} url={}",
                     pickupPincode, deliveryPincode, weightKg, cod, productMrp, url);
             ResponseEntity<Map> resp = restTemplate.postForEntity(url, new HttpEntity<>(payload, headers), Map.class);
             Map body = resp.getBody();
             if (body == null) {
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO,
-                        "Empty response from logistics provider", null));
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Empty response from logistics provider", null));
             }
 
             Object statusObj = body.get("status");
             String status = statusObj == null ? "" : String.valueOf(statusObj);
             if (!Objects.equals(status, "success")) {
-                String msg = extractMessage(body);
-                log.info("IThink serviceability not-serviceable toPincode={} status={} message={}", deliveryPincode,
-                        status, msg);
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, msg, body));
+                log.info("IThink serviceability not-serviceable toPincode={} status={}", deliveryPincode, status);
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Not serviceable", body));
             }
 
             Object dataObj = body.get("data");
             BigDecimal minRate = extractMinRate(dataObj);
             if (minRate == null) {
                 log.info("IThink serviceability rate-not-available toPincode={}", deliveryPincode);
-                return ResponseEntity
-                        .ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Rate not available", body));
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Rate not available", body));
             }
 
             log.info("IThink serviceability serviceable toPincode={} minRate={}", deliveryPincode, minRate);
             return ResponseEntity.ok(new ServiceabilityResponse(true, minRate, "OK", body));
         } catch (RestClientException ex) {
             log.error("IThink serviceability error toPincode={}", deliveryPincode, ex);
-            return ResponseEntity
-                    .ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Failed to fetch rate", ex.getMessage()));
+            return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Failed to fetch rate", ex.getMessage()));
         }
     }
 
@@ -433,8 +317,7 @@ public class IThinkController {
             @RequestParam(value = "cod", defaultValue = "false") boolean cod,
             @RequestParam(value = "productMrp", defaultValue = "0") BigDecimal productMrp) {
 
-        // If proxy is configured, forward request upstream and pass-through
-        // body/content-type.
+        // If proxy is configured, forward request upstream and pass-through body/content-type.
         if (serviceabilityProxyBaseUrl != null && !serviceabilityProxyBaseUrl.isBlank()) {
             String upstreamBase = normalizeBaseUrl(serviceabilityProxyBaseUrl);
             String upstreamUrl = UriComponentsBuilder
@@ -445,16 +328,14 @@ public class IThinkController {
 
             try {
                 log.info("IThink serviceability proxy call to upstreamUrl={}", upstreamUrl);
-                ResponseEntity<String> upstreamResp = restTemplate.exchange(upstreamUrl, HttpMethod.GET,
-                        HttpEntity.EMPTY, String.class);
+                ResponseEntity<String> upstreamResp = restTemplate.exchange(upstreamUrl, HttpMethod.GET, HttpEntity.EMPTY, String.class);
                 HttpHeaders headers = new HttpHeaders();
                 MediaType ct = upstreamResp.getHeaders().getContentType();
                 headers.setContentType(ct != null ? ct : MediaType.APPLICATION_JSON);
                 return new ResponseEntity(upstreamResp.getBody(), headers, upstreamResp.getStatusCode());
             } catch (RestClientException ex) {
                 log.error("IThink serviceability proxy error upstreamUrl={}", upstreamUrl, ex);
-                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO,
-                        "Failed to fetch serviceability", ex.getMessage()));
+                return ResponseEntity.ok(new ServiceabilityResponse(false, BigDecimal.ZERO, "Failed to fetch serviceability", ex.getMessage()));
             }
         }
 
