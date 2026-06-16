@@ -48,7 +48,7 @@ var vite_config_default = defineConfig({
     },
     proxy: {
       "/api": {
-        target: "https://api.rajyadu.in ",
+        target: "http://localhost:8085 ",
         changeOrigin: true,
         secure: true
       }

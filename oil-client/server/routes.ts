@@ -5,7 +5,7 @@ import { storage } from "./storage";
 export async function registerRoutes(app: Express): Promise<Server> {
   // app.post("/api/payments/cashfree/create-order", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const response = await fetch(`${backendUrl}/api/payments/cashfree/create-order`, {
   //       method: "POST",
   //       headers: {
@@ -25,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // app.get("/api/payments/cashfree/orders/:orderId", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const { orderId } = req.params;
   //     const response = await fetch(`${backendUrl}/api/payments/cashfree/orders/${encodeURIComponent(orderId)}`);
   //     const text = await response.text();
@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // app.post("/api/orders", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const response = await fetch(`${backendUrl}/api/orders`, {
   //       method: "POST",
   //       headers: {
@@ -60,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // app.get("/api/orders", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const qp = new URLSearchParams();
   //     for (const [k, v] of Object.entries(req.query)) {
   //       if (v == null) continue;
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // app.get("/api/orders/:id", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const { id } = req.params;
   //     const response = await fetch(`${backendUrl}/api/orders/${encodeURIComponent(id)}`);
   //     const text = await response.text();
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // app.get("/api/admin/orders", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const response = await fetch(`${backendUrl}/api/admin/orders`);
   //     const text = await response.text();
   //     res.status(response.status);
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // app.patch("/api/admin/orders/:id", async (req, res) => {
   //   try {
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const { id } = req.params;
   //     const response = await fetch(`${backendUrl}/api/admin/orders/${encodeURIComponent(id)}`, {
   //       method: "PATCH",
@@ -184,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // app.get("/api/products/filters", async (req, res) => {
   //   try {
   //     // Proxy to Spring Boot backend
-  //     const backendUrl = process.env.OLI_API_BASE_URL || "https://api.rajyadu.in ";
+  //     const backendUrl = process.env.OLI_API_BASE_URL || "http://localhost:8085 ";
   //     const response = await fetch(`${backendUrl}/api/products/filters`);
   //     if (!response.ok) {
   //       return res.status(response.status).json({ error: "Failed to fetch filter options" });
