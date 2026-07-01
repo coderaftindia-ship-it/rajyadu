@@ -44,16 +44,16 @@ export default function Wishlist() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((p) => (
-            <Card key={p.id} className="overflow-hidden">
-              <CardContent className="p-0">
+            <Card key={p.id} className="overflow-hidden flex flex-col h-full">
+              <CardContent className="p-0 flex flex-col flex-grow">
                 <div className="relative">
                   <Link href={`/product/${p.slug}`}>
                     <img
                       src={oliAssetUrl(p.imageUrls?.[0]) ?? p.imageUrls?.[0]}
                       alt={p.name}
-                      className="h-56 w-full cursor-pointer "
+                      className="h-40 sm:h-56 w-full cursor-pointer object-cover"
                     />
                   </Link>
 
@@ -69,23 +69,23 @@ export default function Wishlist() {
                   </Button>
                 </div>
 
-                <div className="space-y-2 p-4">
+                <div className="space-y-2 p-3 sm:p-4 flex flex-col flex-grow justify-between">
                   <Link href={`/product/${p.slug}`}>
-                    <h3 className="line-clamp-2 cursor-pointer text-base font-semibold text-gray-900 hover:text-red-500">
+                    <h3 className="line-clamp-1 sm:line-clamp-2 cursor-pointer text-xs sm:text-base font-semibold text-gray-900 hover:text-red-500">
                       {p.name}
                     </h3>
                   </Link>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-gray-900">₹{p.price}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="text-base sm:text-lg font-bold text-gray-900">₹{p.price}</span>
                       {p.originalPrice && (
-                        <span className="text-sm text-gray-500 line-through">₹{p.originalPrice}</span>
+                        <span className="text-xs sm:text-sm text-gray-500 line-through">₹{p.originalPrice}</span>
                       )}
                     </div>
 
-                    <Link href={`/product/${p.slug}`}>
-                      <Button size="sm" className="btn-primary h-9 px-4 text-xs font-semibold">
+                    <Link href={`/product/${p.slug}`} className="w-full sm:w-auto">
+                      <Button size="sm" className="btn-primary w-full sm:w-auto h-8 sm:h-9 px-3 sm:px-4 text-[10px] sm:text-xs font-semibold flex items-center justify-center">
                         View
                       </Button>
                     </Link>

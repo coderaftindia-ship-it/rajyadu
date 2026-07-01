@@ -46,7 +46,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
   const inWishlist = has(product.id);
 
   return (
-    <Card className={`product-card group overflow-hidden transition-shadow hover:shadow-lg ${className}`}>
+    <Card className={`product-card group overflow-hidden flex flex-col h-full transition-shadow hover:shadow-lg ${className}`}>
       <div className="relative">
         {product.saleOffer && (
           <Badge className="sale-badge">
@@ -89,7 +89,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
           <img
             src={oliAssetUrl(product.imageUrls?.[0]) || product.imageUrls?.[0] || "/placeholder-product.jpg"}
             alt={product.name}
-            className="product-image h-48 w-full cursor-pointer  object-center bg-white transition-transform duration-300 group-hover:scale-[1.03] sm:h-64"
+            className="product-image h-40 w-full cursor-pointer object-cover bg-white transition-transform duration-300 group-hover:scale-[1.03] sm:h-64"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "/placeholder-product.jpg";
             }}
@@ -97,53 +97,54 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
         </Link>
       </div>
 
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-center mb-2">
+      <CardContent className="p-3 sm:p-6 flex flex-col flex-grow">
+        <div className="flex items-center mb-1 sm:mb-2">
           <div className="star-rating">
             {renderStars(ratingValue)}
           </div>
-          <span className="text-gray-600 text-sm ml-2">{ratingValue}</span>
+          <span className="text-gray-600 text-xs sm:text-sm ml-2">{ratingValue}</span>
         </div>
 
         <Link href={`/product/${product.slug}`}>
-          <h3 className="font-semibold text-gray-900 mb-2 hover:text-red-500 transition-colors cursor-pointer text-sm sm:text-base">
+          <h3 className="font-semibold text-gray-900 mb-1 sm:mb-2 hover:text-red-500 transition-colors cursor-pointer text-xs sm:text-base line-clamp-1 sm:line-clamp-2">
             {product.name}
           </h3>
         </Link>
 
-        <p className="text-gray-600 text-sm mb-3">
+        <p className="text-gray-600 text-xs sm:text-sm mb-2 line-clamp-1 sm:line-clamp-2">
           {product.shortDescription}
         </p>
 
         {product.size && (
-          <p className="text-gray-500 text-xs mb-3">{product.size}</p>
+          <p className="text-gray-500 text-[10px] sm:text-xs mb-2 sm:mb-3">{product.size}</p>
         )}
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-lg font-bold text-gray-900">
+        <div className="mt-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <span className="text-base sm:text-lg font-bold text-gray-900">
               ₹{product.price}
             </span>
             {product.originalPrice && (
-              <span className="text-sm text-gray-500 line-through">
+              <span className="text-xs sm:text-sm text-gray-500 line-through">
                 ₹{product.originalPrice}
               </span>
             )}
           </div>
 
           {product.variants?.colors || product.variants?.shades ? (
-            <Link href={`/product/${product.slug}`}>
-              <Button size="sm" className="btn-primary h-9 px-4 text-xs font-semibold">
+            <Link href={`/product/${product.slug}`} className="w-full sm:w-auto">
+              <Button size="sm" className="btn-primary w-full sm:w-auto h-8 sm:h-9 px-3 sm:px-4 text-[10px] sm:text-xs font-semibold flex items-center justify-center">
                 Select Shade
               </Button>
             </Link>
           ) : (
             <Button
               size="sm"
-              className="btn-primary h-9 px-4 text-xs font-semibold"
+              className="btn-primary w-full sm:w-auto h-8 sm:h-9 px-3 sm:px-4 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1"
               type="button"
               disabled={!canAddToCart}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (!product.inStock) return;
                 if (!isAuthenticated) {
                   toast({ title: "Please login to add items", variant: "destructive" });
@@ -153,8 +154,8 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
                 add(product, 1);
               }}
             >
-              <ShoppingCart className="h-4 w-4" />
-              {product.inStock ? "Add to Cart" : "Out of Stock"}
+              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">{product.inStock ? "Add to Cart" : "Out of Stock"}</span>
             </Button>
           )}
         </div>

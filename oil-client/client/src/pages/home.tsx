@@ -198,7 +198,7 @@ export default function Home() {
               <p className="text-gray-600">Our latest additions to the family</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {newLaunchProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -216,7 +216,7 @@ export default function Home() {
           </div>
 
           {productsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
                   <Skeleton className="h-64 w-full" />
@@ -229,7 +229,7 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -247,7 +247,7 @@ export default function Home() {
           </div>
 
           {productsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
                   <Skeleton className="h-64 w-full" />
@@ -260,7 +260,7 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {bestsellerProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
