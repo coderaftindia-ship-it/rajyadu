@@ -154,28 +154,26 @@ public class OrderController {
                     String msg = (created != null && StringUtils.hasText(created.message()))
                             ? created.message().trim()
                             : "Failed to create shipment with logistics provider";
-                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, msg);
+                    log.warn("IThink order creation failed for orderId={}: {}", saved.getId(), msg);
+                    saved.setTrackingUrl("Automatic Booking Failed: " + msg);
+                    saved = orderRepository.save(saved);
+                } else {
+                    if (StringUtils.hasText(created.waybill())) {
+                        saved.setTrackingId(created.waybill().trim());
+                    }
+                    if (StringUtils.hasText(created.trackingUrl())) {
+                        saved.setTrackingUrl(created.trackingUrl().trim());
+                    }
+                    if (!StringUtils.hasText(saved.getTrackingId()) && !StringUtils.hasText(saved.getTrackingUrl())
+                            && StringUtils.hasText(created.message())) {
+                        saved.setTrackingUrl(created.message().trim());
+                    }
+                    saved = orderRepository.save(saved);
                 }
-
-                if (StringUtils.hasText(created.waybill())) {
-                    saved.setTrackingId(created.waybill().trim());
-                }
-                if (StringUtils.hasText(created.trackingUrl())) {
-                    saved.setTrackingUrl(created.trackingUrl().trim());
-                }
-                if (!StringUtils.hasText(saved.getTrackingId()) && !StringUtils.hasText(saved.getTrackingUrl())
-                        && StringUtils.hasText(created.message())) {
-                    saved.setTrackingUrl(created.message().trim());
-                }
-
-                saved = orderRepository.save(saved);
-            } catch (ResponseStatusException ex) {
-                log.warn("IThink order creation failed for orderId={}: {}", saved.getId(), ex.getReason());
-                throw ex;
             } catch (RuntimeException ex) {
                 log.error("IThink order creation error for orderId={}", saved.getId(), ex);
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                        "Failed to create shipment with logistics provider");
+                saved.setTrackingUrl("Automatic Booking Failed: " + ex.getMessage());
+                saved = orderRepository.save(saved);
             }
         }
 
