@@ -29,11 +29,10 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`w-4 h-4 ${
-          i < Math.floor(rating) 
-            ? "fill-yellow-400 text-yellow-400" 
+        className={`w-4 h-4 ${i < Math.floor(rating)
+            ? "fill-yellow-400 text-yellow-400"
             : "text-gray-300"
-        }`}
+          }`}
       />
     ));
   };
@@ -89,7 +88,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
           <img
             src={oliAssetUrl(product.imageUrls?.[0]) || product.imageUrls?.[0] || "/placeholder-product.jpg"}
             alt={product.name}
-            className="product-image h-40 w-full cursor-pointer object-cover bg-white transition-transform duration-300 group-hover:scale-[1.03] sm:h-64"
+            className="product-image h-40 w-full cursor-pointer  bg-white transition-transform duration-300 group-hover:scale-[1.03] sm:h-64"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "/placeholder-product.jpg";
             }}
