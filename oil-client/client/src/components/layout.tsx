@@ -565,25 +565,9 @@ export default function Layout({ children }: LayoutProps) {
                 <img src="/logo.png" alt="RAJYADU Logo" className="h-14 w-auto max-w-[180px] sm:h-20" />
                 <h3 className="text-xl font-bold"></h3>
               </div>
-              
-              <div className="text-gray-400 text-sm space-y-2">
-                <p className="flex items-start gap-2">
-                  <MapPin className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Address:</strong><br />
-                    Majari road, near tvs agany, khtanath gate k pass neemrana kot-bherod raj
-                  </span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-green-500" />
-                  <span>+91 8003845358</span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-green-500" />
-                  <span>dhudaramsonsorganic@rajyadu.in</span>
-                </p>
-              </div>
-           
+              <p className="text-gray-400 text-sm">
+                Premium organic oils and healthy foods directly from nature to your home.
+              </p>
               <div className="flex space-x-4 pt-2">
                 <a href="https://www.instagram.com/rajyadu.dhudaramorganics?utm_source=qr&igsh=MW15dTZvZnN6N3c0NA==" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
                   <Instagram className="w-5 h-5" />
@@ -596,7 +580,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Quick Links */}
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
               <ul className="space-y-2">
                 <li>
                   <Link href="/" className="text-gray-400 hover:text-white transition-colors">
@@ -618,13 +602,17 @@ export default function Layout({ children }: LayoutProps) {
                     Terms & Conditions
                   </Link>
                 </li>
-               
+                <li>
+                  <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
               </ul>
             </div>
 
             {/* Categories */}
             <div>
-              <h4 className="font-semibold mb-4">Categories</h4>
+              <h4 className="font-semibold mb-4 text-white">Categories</h4>
               <ul className="space-y-2">
                 {categories?.map((cat) => (
                   <li key={cat.slug}>
@@ -633,22 +621,34 @@ export default function Layout({ children }: LayoutProps) {
                     </Link>
                   </li>
                 ))}
-                {!categories || categories.length === 0 && (
+                {(!categories || categories.length === 0) && (
                   <li className="text-gray-500">Loading categories...</li>
                 )}
               </ul>
             </div>
 
-            {/* Support */}
+            {/* Contact Us */}
             <div>
-              <h4 className="font-semibold mb-4">Customer Support</h4>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">
-                    Privacy Policy
-                  </Link>
-                </li>
-              </ul>
+              <h4 className="font-semibold mb-4 text-white">Contact Us</h4>
+              <div className="text-gray-400 text-sm space-y-3">
+                <p className="flex items-start gap-2">
+                  <MapPin className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Address:</strong><br />
+                    Majari road, near tvs agany, khtanath gate k pass neemrana kot-bherod raj
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-green-500" />
+                  <span>+91 8003845358</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-green-500" />
+                  <a href="mailto:dhudaramsonsorganic@rajyadu.in" className="hover:text-white transition-colors break-all">
+                    dhudaramsonsorganic@rajyadu.in
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
 
