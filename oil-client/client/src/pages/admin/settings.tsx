@@ -10,7 +10,7 @@ export default function AdminSettings() {
   const { toast } = useToast();
 
   const [contactInfo, setContactInfo] = useState({
-    email: "dhudaramsonsorganic5358@gmail.com",
+    email: "dhudaramsonsorganic@rajyadu.in",
     phone: "8003845358",
     address: "Majari road, near tvs agany, khtanath gate k pass neemrana kot-bherod raj",
   });

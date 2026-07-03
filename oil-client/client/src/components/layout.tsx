@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { Search, User, ShoppingCart, Menu, Sun, Moon, ChevronDown, Heart, LogOut, KeyRound, Package, Home as HomeIcon, LayoutGrid, Info, Phone } from "lucide-react";
+import { Search, User, ShoppingCart, Menu, Sun, Moon, ChevronDown, Heart, LogOut, KeyRound, Package, Home as HomeIcon, LayoutGrid, Info, Phone, MapPin, Mail, Facebook, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -560,24 +560,36 @@ export default function Layout({ children }: LayoutProps) {
         <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 sm:gap-8">
             {/* Company Info */}
-            <div>
+            <div className="flex flex-col space-y-4">
               <div className="flex items-center mb-3">
-                <img src="/logo.png" alt="" className="h-14 w-auto max-w-[180px] sm:h-20" />
+                <img src="/logo.png" alt="RAJYADU Logo" className="h-14 w-auto max-w-[180px] sm:h-20" />
                 <h3 className="text-xl font-bold"></h3>
               </div>
+              
+              <div className="text-gray-400 text-sm space-y-2">
+                <p className="flex items-start gap-2">
+                  <MapPin className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Address:</strong><br />
+                    Majari road, near tvs agany, khtanath gate k pass neemrana kot-bherod raj
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-green-500" />
+                  <span>+91 8003845358</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-green-500" />
+                  <span>dhudaramsonsorganic@rajyadu.in</span>
+                </p>
+              </div>
            
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 pt-2">
                 <a href="https://www.instagram.com/rajyadu.dhudaramorganics?utm_source=qr&igsh=MW15dTZvZnN6N3c0NA==" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <i className="fab fa-instagram"></i>
+                  <Instagram className="w-5 h-5" />
                 </a>
                 <a href="https://www.facebook.com/share/1Dnbc5YrU9/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <i className="fab fa-facebook"></i>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <i className="fab fa-youtube"></i>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <i className="fab fa-twitter"></i>
+                  <Facebook className="w-5 h-5" />
                 </a>
               </div>
             </div>

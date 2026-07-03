@@ -61,6 +61,29 @@ interface Category {
   slug: string;
 }
 
+const formatMessageText = (text: string) => {
+  if (!text) return '';
+  const parts = text.split(/(\*\*.*?\*\*|https?:\/\/[^\s\n]+)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+    } else if (part.startsWith('http://') || part.startsWith('https://')) {
+      return (
+        <a
+          key={idx}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline break-all font-semibold"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -354,7 +377,7 @@ const Chatbot: React.FC = () => {
         "• नंबर: +91 8003845358\n" +
         "• टाइम: 8AM - 8PM\n\n" +
         "📱 **यहां क्लिक करें:**\n" +
-        "https://wa.me/919876543210\n\n" +
+        "https://wa.me/918003845358?text=Hello%20Rajyadu,%20I%20want%20to%20know%20more%20about%20your%20organic%20products.\n\n" +
         "मैं आपको WhatsApp पर भी कनेक्ट कर सकता हूं।" +
         "अपना नंबर दें और हमारी टीम आपसे संपर्क करेगी।",
         'whatsapp'
@@ -497,7 +520,9 @@ const Chatbot: React.FC = () => {
                             : 'bg-gray-100 text-gray-900'
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-line">{message.text}</p>
+                        <p className="text-sm whitespace-pre-line">
+                          {formatMessageText(message.text)}
+                        </p>
                         <div className="flex items-center gap-1 mt-1">
                           <Clock className="w-3 h-3 opacity-60" />
                           <span className="text-xs opacity-60">

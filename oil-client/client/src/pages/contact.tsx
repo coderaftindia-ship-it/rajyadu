@@ -24,7 +24,7 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.message) {
       toast({
@@ -54,7 +54,7 @@ export default function Contact() {
     {
       icon: Mail,
       label: "Email",
-      value: "dhudaramsonsorganic5358@gmail.com",
+      value: "dhudaramsonsorganic@rajyadu.in",
     },
     {
       icon: Phone,
@@ -87,7 +87,7 @@ export default function Contact() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Get in Touch</h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Have questions about our products or need beauty advice? We're here to help you on your journey 
+            Have questions about our products or need beauty advice? We're here to help you on your journey
             to RAJYADU products
           </p>
         </div>
@@ -247,7 +247,7 @@ export default function Contact() {
               <CardContent className="pt-6">
                 <h3 className="font-semibold text-gray-900 mb-2">Frequently Asked Questions</h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  Looking for quick answers? Check out our FAQ section for common questions about 
+                  Looking for quick answers? Check out our FAQ section for common questions about
                   products, shipping, and returns.
                 </p>
                 <Button variant="outline" size="sm">
