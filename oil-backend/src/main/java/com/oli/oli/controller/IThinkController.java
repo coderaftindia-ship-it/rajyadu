@@ -118,6 +118,7 @@ public class IThinkController {
         shipment.put("billing_alt_phone", "");
         shipment.put("billing_email", order.getCustomerEmail() == null ? "" : order.getCustomerEmail().trim());
 
+        BigDecimal productsSum = BigDecimal.ZERO;
         List<Map<String, Object>> products = new java.util.ArrayList<>();
         if (items != null) {
             for (OrderItemEntity it : items) {
@@ -126,13 +127,16 @@ public class IThinkController {
                 Map<String, Object> p = new HashMap<>();
                 p.put("product_name", it.getProductName() == null ? "Product" : it.getProductName());
                 p.put("product_sku", it.getProductId() == null ? "SKU1" : String.valueOf(it.getProductId()));
-                p.put("product_quantity", it.getQuantity() == null ? "1" : String.valueOf(it.getQuantity()));
-                p.put("product_price", it.getUnitPrice() == null ? "0" : it.getUnitPrice().toPlainString());
+                int itemQty = it.getQuantity() == null ? 1 : it.getQuantity();
+                BigDecimal itemPrice = it.getUnitPrice() == null ? BigDecimal.ZERO : it.getUnitPrice();
+                p.put("product_quantity", String.valueOf(itemQty));
+                p.put("product_price", itemPrice.toPlainString());
                 p.put("product_tax_rate", "0");
                 p.put("product_hsn_code", "");
                 p.put("product_discount", "0");
                 p.put("product_img_url", "");
                 products.add(p);
+                productsSum = productsSum.add(itemPrice.multiply(BigDecimal.valueOf(itemQty)));
             }
         }
         shipment.put("products", products);
@@ -148,14 +152,30 @@ public class IThinkController {
         BigDecimal weightKg = weightGm.divide(new BigDecimal("1000"), 3, java.math.RoundingMode.UP);
         shipment.put("weight", weightKg.stripTrailingZeros().toPlainString());
 
-        shipment.put("shipping_charges", "0");
+        BigDecimal totalAmount = order.getTotal() == null ? BigDecimal.ZERO : order.getTotal();
+        BigDecimal shippingCharges = order.getShipping() == null ? BigDecimal.ZERO : order.getShipping();
+
+        BigDecimal calculatedSum = productsSum.add(shippingCharges);
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+
+        if (calculatedSum.compareTo(totalAmount) > 0) {
+            totalDiscount = calculatedSum.subtract(totalAmount);
+        } else if (calculatedSum.compareTo(totalAmount) < 0) {
+            shippingCharges = totalAmount.subtract(productsSum);
+            if (shippingCharges.compareTo(BigDecimal.ZERO) < 0) {
+                shippingCharges = BigDecimal.ZERO;
+            }
+        }
+
+        shipment.put("total_amount", totalAmount.toPlainString());
+        shipment.put("shipping_charges", shippingCharges.toPlainString());
         shipment.put("giftwrap_charges", "0");
         shipment.put("transaction_charges", "0");
-        shipment.put("total_discount", "0");
+        shipment.put("total_discount", totalDiscount.toPlainString());
         shipment.put("first_attemp_discount", "0");
 
         boolean cod = order.getPaymentMethod() != null && order.getPaymentMethod().trim().equalsIgnoreCase("cod");
-        shipment.put("cod_amount", cod ? (order.getTotal() == null ? "0" : order.getTotal().toPlainString()) : "0");
+        shipment.put("cod_amount", cod ? totalAmount.toPlainString() : "0");
         shipment.put("payment_mode", cod ? "COD" : "Prepaid");
 
         shipment.put("reseller_name", "");
