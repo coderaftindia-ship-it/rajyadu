@@ -82,6 +82,8 @@ public class IThinkController {
         String apiBase = (orderBaseUrl == null || orderBaseUrl.isBlank()) ? baseUrl : orderBaseUrl;
         String url = normalizeBaseUrl(apiBase) + "/api_v3/order/add.json";
 
+        String cleanPhone = formatPhoneNumber(order.getCustomerPhone());
+
         Map<String, Object> shipment = new HashMap<>();
         shipment.put("waybill", "");
         shipment.put("order", order.getId());
@@ -89,32 +91,32 @@ public class IThinkController {
         shipment.put("order_date",
                 java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
         shipment.put("total_amount", order.getTotal() == null ? "0" : order.getTotal().toPlainString());
-        shipment.put("name", order.getCustomerName() == null ? "" : order.getCustomerName());
+        shipment.put("name", order.getCustomerName() == null ? "" : order.getCustomerName().trim());
         shipment.put("company_name", "");
-        shipment.put("add", order.getShippingAddress() == null ? "" : order.getShippingAddress());
+        shipment.put("add", order.getShippingAddress() == null ? "" : order.getShippingAddress().trim());
         shipment.put("add2", "");
         shipment.put("add3", "");
-        shipment.put("pin", order.getShippingPincode());
-        shipment.put("city", order.getShippingCity() == null ? "" : order.getShippingCity());
-        shipment.put("state", order.getShippingState() == null ? "" : order.getShippingState());
+        shipment.put("pin", order.getShippingPincode().trim());
+        shipment.put("city", order.getShippingCity() == null ? "" : order.getShippingCity().trim());
+        shipment.put("state", order.getShippingState() == null ? "" : order.getShippingState().trim());
         shipment.put("country", "India");
-        shipment.put("phone", order.getCustomerPhone() == null ? "" : order.getCustomerPhone());
+        shipment.put("phone", cleanPhone);
         shipment.put("alt_phone", "");
-        shipment.put("email", order.getCustomerEmail() == null ? "" : order.getCustomerEmail());
+        shipment.put("email", order.getCustomerEmail() == null ? "" : order.getCustomerEmail().trim());
 
         shipment.put("is_billing_same_as_shipping", "yes");
-        shipment.put("billing_name", order.getCustomerName() == null ? "" : order.getCustomerName());
+        shipment.put("billing_name", order.getCustomerName() == null ? "" : order.getCustomerName().trim());
         shipment.put("billing_company_name", "");
-        shipment.put("billing_add", order.getShippingAddress() == null ? "" : order.getShippingAddress());
+        shipment.put("billing_add", order.getShippingAddress() == null ? "" : order.getShippingAddress().trim());
         shipment.put("billing_add2", "");
         shipment.put("billing_add3", "");
-        shipment.put("billing_pin", order.getShippingPincode());
-        shipment.put("billing_city", order.getShippingCity() == null ? "" : order.getShippingCity());
-        shipment.put("billing_state", order.getShippingState() == null ? "" : order.getShippingState());
+        shipment.put("billing_pin", order.getShippingPincode().trim());
+        shipment.put("billing_city", order.getShippingCity() == null ? "" : order.getShippingCity().trim());
+        shipment.put("billing_state", order.getShippingState() == null ? "" : order.getShippingState().trim());
         shipment.put("billing_country", "India");
-        shipment.put("billing_phone", order.getCustomerPhone() == null ? "" : order.getCustomerPhone());
+        shipment.put("billing_phone", cleanPhone);
         shipment.put("billing_alt_phone", "");
-        shipment.put("billing_email", order.getCustomerEmail() == null ? "" : order.getCustomerEmail());
+        shipment.put("billing_email", order.getCustomerEmail() == null ? "" : order.getCustomerEmail().trim());
 
         List<Map<String, Object>> products = new java.util.ArrayList<>();
         if (items != null) {
@@ -122,9 +124,9 @@ public class IThinkController {
                 if (it == null)
                     continue;
                 Map<String, Object> p = new HashMap<>();
-                p.put("product_name", it.getProductName() == null ? "" : it.getProductName());
-                p.put("product_sku", it.getProductId() == null ? "" : String.valueOf(it.getProductId()));
-                p.put("product_quantity", it.getQuantity() == null ? "0" : String.valueOf(it.getQuantity()));
+                p.put("product_name", it.getProductName() == null ? "Product" : it.getProductName());
+                p.put("product_sku", it.getProductId() == null ? "SKU1" : String.valueOf(it.getProductId()));
+                p.put("product_quantity", it.getQuantity() == null ? "1" : String.valueOf(it.getQuantity()));
                 p.put("product_price", it.getUnitPrice() == null ? "0" : it.getUnitPrice().toPlainString());
                 p.put("product_tax_rate", "0");
                 p.put("product_hsn_code", "");
@@ -167,8 +169,8 @@ public class IThinkController {
         data.put("pickup_address_id", pickupAddressId);
         data.put("access_token", accessToken);
         data.put("secret_key", secretKey);
-        data.put("logistics", defaultLogistics);
-        data.put("s_type", defaultServiceType);
+        data.put("logistics", defaultLogistics == null ? "" : defaultLogistics);
+        data.put("s_type", defaultServiceType == null ? "" : defaultServiceType);
         data.put("order_type", "");
 
         Map<String, Object> payload = Map.of("data", data);
@@ -187,35 +189,105 @@ public class IThinkController {
                 return new CreateOrderResponse(false, null, null, null, "Empty response from logistics provider", null);
             }
 
-            Object statusObj = body.get("status");
-            String status = statusObj == null ? "" : String.valueOf(statusObj);
-            if (!Objects.equals(status, "success")) {
-                String msg = extractMessage(body);
-                log.warn("IThink createOrder failed orderId={} status={} message={}", order.getId(), status, msg);
+            log.info("IThink createOrder raw response for orderId={}: {}", order.getId(), body);
+            return parseCreateOrderResponse(order.getId(), body);
+        } catch (RestClientException ex) {
+            log.error("IThink createOrder error orderId={}", order.getId(), ex);
+            return new CreateOrderResponse(false, null, null, null, "Failed to connect to logistics provider: " + ex.getMessage(), ex.getMessage());
+        }
+    }
+
+    private static String formatPhoneNumber(String phone) {
+        if (phone == null) return "";
+        String cleaned = phone.replaceAll("[^0-9]", "");
+        if (cleaned.length() > 10 && (cleaned.startsWith("91") || cleaned.startsWith("0"))) {
+            cleaned = cleaned.substring(cleaned.length() - 10);
+        }
+        return cleaned;
+    }
+
+    private CreateOrderResponse parseCreateOrderResponse(String orderId, Map body) {
+        if (body == null) {
+            return new CreateOrderResponse(false, null, null, null, "Empty response from logistics provider", null);
+        }
+
+        Object statusObj = body.get("status");
+        Object statusCodeObj = body.get("status_code");
+        String rootStatus = statusObj == null ? "" : String.valueOf(statusObj).toLowerCase();
+        String statusCode = statusCodeObj == null ? "" : String.valueOf(statusCodeObj);
+
+        if (!rootStatus.equals("success") && !statusCode.equals("200")) {
+            String msg = extractMessage(body);
+            log.warn("IThink createOrder failed orderId={} rootStatus={} statusCode={} message={}", orderId, rootStatus, statusCode, msg);
+            return new CreateOrderResponse(false, null, null, null, msg, body);
+        }
+
+        Object dataObj = body.get("data");
+        Map<?, ?> shipmentData = null;
+
+        if (dataObj instanceof Map<?, ?> m) {
+            if (m.containsKey("1") && m.get("1") instanceof Map<?, ?> sm) {
+                shipmentData = sm;
+            } else if (m.containsKey("0") && m.get("0") instanceof Map<?, ?> sm) {
+                shipmentData = sm;
+            } else if (m.containsKey("shipments") && m.get("shipments") instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> sm) {
+                shipmentData = sm;
+            } else if (m.containsKey("waybill") || m.containsKey("tracking_url")) {
+                shipmentData = m;
+            } else {
+                for (Object val : m.values()) {
+                    if (val instanceof Map<?, ?> sm) {
+                        shipmentData = sm;
+                        break;
+                    }
+                }
+            }
+        } else if (dataObj instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> sm) {
+            shipmentData = sm;
+        }
+
+        if (shipmentData != null) {
+            Object itemStatus = shipmentData.get("status");
+            Object remark = shipmentData.get("remark");
+            String itemStatusStr = itemStatus == null ? "" : String.valueOf(itemStatus).toLowerCase();
+            String remarkStr = remark == null ? "" : String.valueOf(remark).trim();
+
+            if (itemStatusStr.equals("error") || (remarkStr.toLowerCase().contains("error") || remarkStr.toLowerCase().contains("failed") || remarkStr.toLowerCase().contains("invalid") || remarkStr.toLowerCase().contains("not serviceable"))) {
+                String msg = !remarkStr.isBlank() ? remarkStr : "Logistics provider returned an error for this shipment";
+                log.warn("IThink createOrder shipment error orderId={} remark={}", orderId, msg);
                 return new CreateOrderResponse(false, null, null, null, msg, body);
             }
 
-            Object dataObj = body.get("data");
-            if (dataObj instanceof Map<?, ?> m) {
-                Object firstObj = m.get("1");
-                if (firstObj instanceof Map<?, ?> first) {
-                    String waybill = first.get("waybill") == null ? null : String.valueOf(first.get("waybill"));
-                    String trackingUrl = first.get("tracking_url") == null ? null
-                            : String.valueOf(first.get("tracking_url"));
-                    String logistics = first.get("logistic_name") == null ? null
-                            : String.valueOf(first.get("logistic_name"));
-                    log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}",
-                            order.getId(), waybill, logistics, trackingUrl);
-                    return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
-                }
-            }
+            String waybill = getFirstNonBlank(shipmentData, "waybill", "waybill_number", "awb", "awb_number");
+            String trackingUrl = getFirstNonBlank(shipmentData, "tracking_url", "tracking_link");
+            String logistics = getFirstNonBlank(shipmentData, "logistic_name", "logistics_name", "courier_name");
 
-            log.info("IThink createOrder success orderId={} waybill=<none>", order.getId());
-            return new CreateOrderResponse(true, null, null, null, "OK", body);
-        } catch (RestClientException ex) {
-            log.error("IThink createOrder error orderId={}", order.getId(), ex);
-            return new CreateOrderResponse(false, null, null, null, "Failed to create order", ex.getMessage());
+            if (waybill != null && !waybill.isBlank()) {
+                log.info("IThink createOrder success orderId={} waybill={} logistics={} trackingUrl={}", orderId, waybill, logistics, trackingUrl);
+                return new CreateOrderResponse(true, waybill, trackingUrl, logistics, "OK", body);
+            } else if (!remarkStr.isBlank()) {
+                log.warn("IThink createOrder no waybill orderId={} remark={}", orderId, remarkStr);
+                return new CreateOrderResponse(false, null, null, null, remarkStr, body);
+            }
         }
+
+        String msg = extractMessage(body);
+        if ("OK".equalsIgnoreCase(msg) || "Failed to create order".equalsIgnoreCase(msg)) {
+            msg = "Logistics provider did not return a waybill number";
+        }
+        log.warn("IThink createOrder failed orderId={} message={}", orderId, msg);
+        return new CreateOrderResponse(false, null, null, null, msg, body);
+    }
+
+    private static String getFirstNonBlank(Map<?, ?> map, String... keys) {
+        if (map == null) return null;
+        for (String k : keys) {
+            Object val = map.get(k);
+            if (val != null && !String.valueOf(val).isBlank()) {
+                return String.valueOf(val).trim();
+            }
+        }
+        return null;
     }
 
     private static String extractMessage(Map body) {

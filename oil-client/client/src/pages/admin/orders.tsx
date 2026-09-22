@@ -80,8 +80,16 @@ export default function AdminOrders() {
     const status = editStatus[id] ?? order.status ?? "Pending";
     const deliveryProviderRaw = editDelivery[id] ?? order.deliveryProvider ?? "";
     const deliveryProvider = deliveryProviderRaw === "None" ? "" : deliveryProviderRaw;
-    const trackingId = editTrackingId[id] ?? order.trackingId ?? "";
-    const trackingUrl = editTrackingUrl[id] ?? order.trackingUrl ?? "";
+
+    let trackingId = editTrackingId[id] ?? order.trackingId ?? "";
+    if (trackingId.trim().toUpperCase() === "OK" || trackingId.trim().toUpperCase() === "NULL" || trackingId.trim().toUpperCase() === "FAILED") {
+      trackingId = "";
+    }
+
+    let trackingUrl = editTrackingUrl[id] ?? order.trackingUrl ?? "";
+    if (trackingUrl.trim().toUpperCase() === "OK") {
+      trackingUrl = "";
+    }
 
     try {
       setSavingId(id);
