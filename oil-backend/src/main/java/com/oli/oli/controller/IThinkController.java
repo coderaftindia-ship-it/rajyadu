@@ -190,7 +190,29 @@ public class IThinkController {
             }
 
             log.info("IThink createOrder raw response for orderId={}: {}", order.getId(), body);
-            return parseCreateOrderResponse(order.getId(), body);
+            var res = parseCreateOrderResponse(order.getId(), body);
+
+            // If specific logistics failed (e.g. delhivery not serviceable), retry with auto logistics (empty string)
+            if (!res.success() && defaultLogistics != null && !defaultLogistics.isBlank()) {
+                log.info("Retrying IThink createOrder with auto-logistics for orderId={}", order.getId());
+                data.put("logistics", "");
+                payload = Map.of("data", data);
+                try {
+                    ResponseEntity<Map> resp2 = restTemplate.postForEntity(url, new HttpEntity<>(payload, headers), Map.class);
+                    Map body2 = resp2.getBody();
+                    if (body2 != null) {
+                        var res2 = parseCreateOrderResponse(order.getId(), body2);
+                        if (res2.success()) {
+                            log.info("IThink auto-logistics retry succeeded for orderId={}", order.getId());
+                            return res2;
+                        }
+                    }
+                } catch (Exception ex2) {
+                    log.warn("IThink auto-logistics retry error for orderId={}", order.getId(), ex2);
+                }
+            }
+
+            return res;
         } catch (RestClientException ex) {
             log.error("IThink createOrder error orderId={}", order.getId(), ex);
             return new CreateOrderResponse(false, null, null, null, "Failed to connect to logistics provider: " + ex.getMessage(), ex.getMessage());

@@ -190,28 +190,7 @@ public class OrderController {
     }
 
     private String resolveDeliveryProvider(CreateOrderRequest req) {
-        if (req == null) {
-            return "Manual";
-        }
-
-        String pincode = StringUtils.hasText(req.shippingPincode()) ? req.shippingPincode().trim() : null;
-        if (!StringUtils.hasText(pincode)) {
-            return "Manual";
-        }
-
-        boolean cod = StringUtils.hasText(req.paymentMethod()) && req.paymentMethod().trim().equalsIgnoreCase("cod");
-        BigDecimal productMrp = req.subtotal() == null ? BigDecimal.ZERO : req.subtotal();
-
-        try {
-            var resp = iThinkController.serviceability(pincode, new BigDecimal("0.5"), cod, productMrp);
-            var body = resp == null ? null : resp.getBody();
-            if (body != null && body.serviceable()) {
-                return "IThink";
-            }
-            return "Manual";
-        } catch (RuntimeException ex) {
-            return "Manual";
-        }
+        return "IThink";
     }
 
     @GetMapping("/api/orders")
